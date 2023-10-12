@@ -3,12 +3,12 @@ use std::io::{prelude::*, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use bzip::CompressMode;
 use clap::ValueHint;
 use clap::builder::TypedValueParser;
 
 use eyre_span::emit;
-use themelios_archive::dirdat::{self, DirEntry, Name};
+use falcompress::bzip;
+use crate::dirdat::{self, DirEntry, Name};
 
 #[derive(Debug, Clone, clap::Args)]
 #[command(arg_required_else_help = true)]
@@ -24,12 +24,12 @@ pub struct Command {
 		require_equals = true, num_args=0..=1, default_missing_value="2",
 		value_parser = clap::builder::PossibleValuesParser::new(["1", "2"])
 			.map(|a| match a.as_str() {
-				"1" => CompressMode::Mode1,
-				"2" => CompressMode::Mode2,
+				"1" => bzip::CompressMode::Mode1,
+				"2" => bzip::CompressMode::Mode2,
 				_ => unreachable!()
 			})
 	)]
-	compression: Option<CompressMode>,
+	compression: Option<bzip::CompressMode>,
 
 	/// Reserve space in the data for later updates
 	#[clap(short, long)]
@@ -97,8 +97,8 @@ fn add(cmd: &Command, dir: &mut [DirEntry], dat: &mut File, file: &Path) -> eyre
 	};
 
 	match compression {
-		Some(CompressMode::Mode1) => tracing::debug!("using compression mode 1"),
-		Some(CompressMode::Mode2) => tracing::debug!("using compression mode 2"),
+		Some(bzip::CompressMode::Mode1) => tracing::debug!("using compression mode 1"),
+		Some(bzip::CompressMode::Mode2) => tracing::debug!("using compression mode 2"),
 		None => tracing::debug!("using no compression"),
 	}
 

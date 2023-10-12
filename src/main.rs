@@ -5,6 +5,7 @@ use eyre_span::emit;
 
 mod util;
 mod grid;
+mod dirdat;
 
 mod extract;
 mod list;

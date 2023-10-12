@@ -6,8 +6,9 @@ use clap::ValueHint;
 use eyre_span::emit;
 use indicatif::ParallelProgressIterator;
 use rayon::prelude::*;
-use themelios_archive::dirdat;
 
+use falcompress::bzip;
+use crate::dirdat;
 use crate::util::mmap;
 
 #[derive(Debug, Clone, clap::Args)]

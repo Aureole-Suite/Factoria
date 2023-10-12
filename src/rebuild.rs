@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use clap::ValueHint;
 
 use eyre_span::emit;
-use themelios_archive::dirdat::{self, DirEntry, Name};
+use crate::dirdat::{self, DirEntry, Name};
 
 #[derive(Debug, Clone, clap::Args)]
 #[command(arg_required_else_help = true)]

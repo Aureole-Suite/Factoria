@@ -2,9 +2,9 @@ use std::path::{PathBuf, Path};
 
 use clap::ValueHint;
 
-use bzip::CompressMode;
+use falcompress::bzip;
 use eyre_span::emit;
-use themelios_archive::dirdat::{self, DirEntry};
+use crate::dirdat::{self, DirEntry};
 
 use crate::util::mmap;
 use crate::grid::{Grid, Cell, Orientation};
@@ -235,8 +235,8 @@ fn format_size(cmd: &Command, e: &Entry) -> String {
 		s.push_str(&format_size2(cmd, e.size));
 	}
 	match e.compression_mode {
-		Some(CompressMode::Mode1) => s.push('⇒'),
-		Some(CompressMode::Mode2) => s.push('→'),
+		Some(bzip::CompressMode::Mode1) => s.push('⇒'),
+		Some(bzip::CompressMode::Mode2) => s.push('→'),
 		None if e.decompressed_size.is_some() => s.push('⇢'),
 		None => {},
 	}
