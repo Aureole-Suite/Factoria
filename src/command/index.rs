@@ -51,7 +51,7 @@ fn index(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
 		None
 	};
 	let dat = dat.as_deref();
-	let archive_number = crate::list::get_archive_number(dir_file);
+	let archive_number = super::list::get_archive_number(dir_file);
 
 	let json = dir.iter().enumerate().map(|(id, ent)| {
 		let _span = tracing::debug_span!("index_file", id=%format_args!("{id:04X}"), name=%ent.name).entered();
