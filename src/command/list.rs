@@ -306,10 +306,17 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 			decompressed_size: None,
 			compression_mode: None,
 		})
-		.filter(|e| cmd.actually_all || e.name != dirdat::Name::default())
-		.filter(|e| cmd.actually_all || cmd.all || e.timestamp != 0)
-		.filter(|e| globset.is_empty() || globset.is_match(e.name.to_string()))
 		.collect::<Vec<_>>();
+
+	if !cmd.actually_all {
+		entries.retain(|e| e.name != dirdat::Name::default());
+	}
+	if !cmd.actually_all && !cmd.all {
+		entries.retain(|e| e.timestamp != 0);
+	}
+	if !globset.is_empty() {
+		entries.retain(|e| globset.is_match(e.name.to_string()));
+	}
 
 	if !cmd.compressed && (cmd.size || cmd.long || cmd.sort == SortColumn::Size) {
 		if let Ok(dat) = mmap(&dir_file.with_extension("dat")) {
