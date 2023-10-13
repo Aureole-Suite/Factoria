@@ -1,6 +1,6 @@
 use std::io::{prelude::*, SeekFrom};
-use std::path::{Path, PathBuf};
 
+use camino::{Utf8PathBuf, Utf8Path};
 use clap::ValueHint;
 
 use eyre_span::emit;
@@ -24,11 +24,11 @@ pub struct Command {
 	///
 	/// .dat file will be placed next to the .dir.
 	#[clap(long, short, value_hint = ValueHint::AnyPath)]
-	output: Option<PathBuf>,
+	output: Option<Utf8PathBuf>,
 
 	/// The .dir files to rebuild
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	dir_file: Vec<PathBuf>,
+	dir_file: Vec<Utf8PathBuf>,
 }
 
 pub fn run(cmd: &Command) -> eyre::Result<()> {
@@ -38,8 +38,8 @@ pub fn run(cmd: &Command) -> eyre::Result<()> {
 	Ok(())
 }
 
-#[tracing::instrument(skip_all, fields(path=%dir_file.display(), out))]
-fn rebuild(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
+#[tracing::instrument(skip_all, fields(path=%dir_file, out))]
+fn rebuild(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<()> {
 	let mut dir = dirdat::read_dir(&std::fs::read(dir_file)?)?;
 	let dat = crate::util::mmap(&dir_file.with_extension("dat"))?;
 
@@ -49,7 +49,7 @@ fn rebuild(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
 		Some(f) => f.to_path_buf(),
 	};
 
-	tracing::Span::current().record("out", tracing::field::display(out_dir.display()));
+	tracing::Span::current().record("out", tracing::field::display(&out_dir));
 
 	std::fs::create_dir_all(out_dir.parent().unwrap())?;
 

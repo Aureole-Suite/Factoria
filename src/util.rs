@@ -1,15 +1,14 @@
-use std::path::Path;
-
+use camino::Utf8Path;
 use clap::builder::TypedValueParser;
 
-#[tracing::instrument(fields(path=%path.display()))]
-pub fn mmap(path: &Path) -> eyre::Result<memmap2::Mmap> {
+#[tracing::instrument(fields(path=%path))]
+pub fn mmap(path: &Utf8Path) -> eyre::Result<memmap2::Mmap> {
 	let file = std::fs::File::open(path)?;
 	Ok(unsafe { memmap2::Mmap::map(&file)? })
 }
 
-#[tracing::instrument(fields(path=%path.display()))]
-pub fn mmap_mut(path: &Path) -> eyre::Result<memmap2::MmapMut> {
+#[tracing::instrument(fields(path=%path))]
+pub fn mmap_mut(path: &Utf8Path) -> eyre::Result<memmap2::MmapMut> {
 	let file = std::fs::File::options().read(true).write(true).open(path)?;
 	Ok(unsafe { memmap2::MmapMut::map_mut(&file)? })
 }

@@ -1,5 +1,4 @@
-use std::path::PathBuf;
-
+use camino::Utf8PathBuf;
 use clap::ValueHint;
 
 use eyre_span::emit;
@@ -22,14 +21,14 @@ pub struct Command {
 
 	/// .dir file to insert into
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	dir_file: PathBuf,
+	dir_file: Utf8PathBuf,
 
 	/// Files to delete
 	#[clap(required = true)]
 	file: Vec<String>,
 }
 
-#[tracing::instrument(skip_all, fields(path=%cmd.dir_file.display()))]
+#[tracing::instrument(skip_all, fields(path=%cmd.dir_file))]
 pub fn run(cmd: &Command) -> eyre::Result<()> {
 	let mut dir = dirdat::read_dir(&std::fs::read(&cmd.dir_file)?)?;
 	let mut dat = crate::util::mmap_mut(&cmd.dir_file.with_extension("dat"))?;

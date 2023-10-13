@@ -1,5 +1,4 @@
-use std::path::{PathBuf, Path};
-
+use camino::{Utf8PathBuf, Utf8Path};
 use clap::ValueHint;
 
 use falcompress::bzip;
@@ -68,7 +67,7 @@ pub struct Command {
 
 	/// The .dir file(s) to inspect.
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	dir_file: Vec<PathBuf>,
+	dir_file: Vec<Utf8PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, clap::ValueEnum)]
@@ -100,7 +99,7 @@ impl std::ops::Deref for Entry {
 pub fn run(cmd: &Command) -> eyre::Result<()> {
 	for (idx, dir_file) in cmd.dir_file.iter().enumerate() {
 		if cmd.dir_file.len() != 1 {
-			println!("{}:", dir_file.display());
+			println!("{dir_file}:");
 		}
 
 		emit(list(cmd, dir_file));
@@ -112,8 +111,8 @@ pub fn run(cmd: &Command) -> eyre::Result<()> {
 	Ok(())
 }
 
-#[tracing::instrument(skip_all, fields(path=%dir_file.display()))]
-fn list(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
+#[tracing::instrument(skip_all, fields(path=%dir_file))]
+fn list(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<()> {
 	let archive_number = get_archive_number(dir_file);
 	let entries = get_entries(cmd, dir_file)?;
 
@@ -291,7 +290,7 @@ fn get_color(ext: &str) -> Option<u8> {
 }
 
 #[tracing::instrument(skip_all)]
-fn get_entries(cmd: &Command, dir_file: &Path) -> eyre::Result<Vec<Entry>> {
+fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 	let mut globset = globset::GlobSetBuilder::new();
 	for glob in &cmd.glob {
 		globset.add(glob.clone());
@@ -346,10 +345,9 @@ fn get_entries(cmd: &Command, dir_file: &Path) -> eyre::Result<Vec<Entry>> {
 	Ok(entries)
 }
 
-pub(crate) fn get_archive_number(path: &Path) -> Option<u8> {
+pub(crate) fn get_archive_number(path: &Utf8Path) -> Option<u8> {
 	let name = path
 		.file_name()?
-		.to_str()?
 		.strip_prefix("ED6_DT")?
 		.strip_suffix(".dir")?;
 	u8::from_str_radix(name, 16).ok()

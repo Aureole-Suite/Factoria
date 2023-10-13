@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use std::path::{PathBuf, Path};
 
+use camino::{Utf8PathBuf, Utf8Path};
 use clap::ValueHint;
 
 use eyre_span::emit;
@@ -21,7 +21,7 @@ pub struct Command {
 	///
 	/// If unspecified, place the subdirectory next to the .dir file.
 	#[clap(long, short, value_hint = ValueHint::DirPath)]
-	output: Option<PathBuf>,
+	output: Option<Utf8PathBuf>,
 	/// Include zero-sized files
 	#[clap(short, long)]
 	all: bool,
@@ -34,7 +34,7 @@ pub struct Command {
 
 	/// The .dir file(s) to extract.
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	dir_file: Vec<PathBuf>,
+	dir_file: Vec<Utf8PathBuf>,
 }
 
 pub fn run(cmd: &Command) -> eyre::Result<()> {
@@ -44,8 +44,8 @@ pub fn run(cmd: &Command) -> eyre::Result<()> {
 	Ok(())
 }
 
-#[tracing::instrument(skip_all, fields(path=%dir_file.display()))]
-fn extract(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
+#[tracing::instrument(skip_all, fields(path=%dir_file))]
+fn extract(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<()> {
 	let dir_entries = dirdat::read_dir(&std::fs::read(dir_file)?)?;
 	let dat = mmap(&dir_file.with_extension("dat"))?;
 
@@ -72,7 +72,7 @@ fn extract(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
 		.progress_chars("█🮆🮅🮄▀🮃🮂▔ ");
 	let ind = indicatif::ProgressBar::new(dir_entries.len() as _)
 		.with_style(style)
-		.with_prefix(dir_file.display().to_string());
+		.with_prefix(dir_file.to_string());
 	dir_entries.par_iter().progress_with(ind.clone()).for_each(|e| {
 		emit(try {
 			let _span = tracing::info_span!(parent: &span, "extract_file", name=%e.name).entered();

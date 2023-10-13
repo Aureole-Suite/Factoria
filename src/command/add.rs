@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::{prelude::*, SeekFrom};
-use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use camino::{Utf8PathBuf, Utf8Path};
 use clap::ValueHint;
 use clap::builder::TypedValueParser;
 
@@ -37,14 +37,14 @@ pub struct Command {
 
 	/// .dir file to insert into
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	dir_file: PathBuf,
+	dir_file: Utf8PathBuf,
 
 	/// Files to insert
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	file: Vec<PathBuf>,
+	file: Vec<Utf8PathBuf>,
 }
 
-#[tracing::instrument(skip_all, fields(path=%cmd.dir_file.display()))]
+#[tracing::instrument(skip_all, fields(path=%cmd.dir_file))]
 pub fn run(cmd: &Command) -> eyre::Result<()> {
 	let mut dir = dirdat::read_dir(&std::fs::read(&cmd.dir_file)?)?;
 
@@ -68,16 +68,15 @@ pub fn run(cmd: &Command) -> eyre::Result<()> {
 	Ok(())
 }
 
-#[tracing::instrument(skip_all, fields(file=%file.display()))]
-fn add(cmd: &Command, dir: &mut [DirEntry], dat: &mut File, file: &Path) -> eyre::Result<()> {
+#[tracing::instrument(skip_all, fields(file=%file))]
+fn add(cmd: &Command, dir: &mut [DirEntry], dat: &mut File, file: &Utf8Path) -> eyre::Result<()> {
 	// Starting with a stat call gives us a nice error if it doesn't exist
 	let timestamp = std::fs::metadata(file)?
 		.modified()
 		.unwrap_or_else(|_| SystemTime::now());
 	let timestamp = timestamp.duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
 
-	let name = file.file_name().unwrap().to_string_lossy();
-	let name = Name::try_from(&*name)?;
+	let name = Name::try_from(file.file_name().unwrap())?;
 
 	let id = get_id(dir, name)?;
 	let ent = &mut dir[id];

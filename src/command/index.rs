@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
 use std::io::{self, BufWriter, Write};
 
+use camino::{Utf8PathBuf, Utf8Path};
 use clap::ValueHint;
 use serde::Serialize;
 use serde_json::Value;
@@ -28,11 +28,11 @@ pub struct Command {
 	/// This is *not* the path of the actual file, for consistency with the `extract` command.
 	/// As a special case, if this is `-`, the json is written to stdout.
 	#[clap(long, short, value_hint = ValueHint::DirPath)]
-	output: Option<PathBuf>,
+	output: Option<Utf8PathBuf>,
 
 	/// The .dir files to create indexes for
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	dir_file: Vec<PathBuf>,
+	dir_file: Vec<Utf8PathBuf>,
 }
 
 pub fn run(cmd: &Command) -> eyre::Result<()> {
@@ -42,8 +42,8 @@ pub fn run(cmd: &Command) -> eyre::Result<()> {
 	Ok(())
 }
 
-#[tracing::instrument(skip_all, fields(path=%dir_file.display(), out))]
-fn index(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
+#[tracing::instrument(skip_all, fields(path=%dir_file, out))]
+fn index(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<()> {
 	let dir = dirdat::read_dir(&std::fs::read(dir_file)?)?;
 	let dat = if !cmd.compressed {
 		Some(crate::util::mmap(&dir_file.with_extension("dat"))?)
@@ -64,7 +64,7 @@ fn index(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
 		(key, index_file(ent, dir_file, dat))
 	}).collect::<Value>();
 
-	let out = if cmd.output.as_ref().is_some_and(|a| a == Path::new("-")) {
+	let out = if cmd.output.as_ref().is_some_and(|a| a == "-") {
 		tracing::Span::current().record("out", tracing::field::display("stdout"));
 		Box::new(std::io::stdout().lock()) as Box<dyn Write>
 	} else {
@@ -74,7 +74,7 @@ fn index(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
 			.with_extension("json");
 
 		std::fs::create_dir_all(out.parent().unwrap())?;
-		tracing::Span::current().record("out", tracing::field::display(out.display()));
+		tracing::Span::current().record("out", tracing::field::display(&out));
 		Box::new(std::fs::File::create(out)?)
 	};
 
@@ -89,7 +89,7 @@ fn index(cmd: &Command, dir_file: &Path) -> eyre::Result<()> {
 	Ok(())
 }
 
-fn index_file(m: &DirEntry, dir_file: &Path, dat: Option<&[u8]>) -> Value {
+fn index_file(m: &DirEntry, dir_file: &Utf8Path, dat: Option<&[u8]>) -> Value {
 	if m.name == Name::default() {
 		Value::Null
 	} else {
@@ -99,7 +99,7 @@ fn index_file(m: &DirEntry, dir_file: &Path, dat: Option<&[u8]>) -> Value {
 			o.insert("path".into(), Value::Null);
 			o.insert("name".into(), m.name.to_string().into());
 		} else {
-			o.insert("path".into(), format!("{}/{}", dir_file.file_stem().unwrap().to_string_lossy(), m.name).into());
+			o.insert("path".into(), format!("{}/{}", dir_file.file_stem().unwrap(), m.name).into());
 			let comp = dat.and_then(|a| a.get(m.offset..m.offset+m.size)).and_then(bzip::compression_info_ed6);
 			if let Some(comp) = comp {
 				match comp.1.unwrap_or_default() {

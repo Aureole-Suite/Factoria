@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 use std::io::{prelude::*, SeekFrom};
 use std::time::SystemTime;
 
+use camino::{Utf8PathBuf, Utf8Path};
 use clap::ValueHint;
 use indicatif::ProgressIterator;
 use serde::de::{self, Deserialize};
@@ -16,11 +16,11 @@ use crate::dirdat::{self, DirEntry, Name};
 pub struct Command {
 	/// Directory to place resulting .dir/.dat in
 	#[clap(long, short, value_hint = ValueHint::DirPath)]
-	output: Option<PathBuf>,
+	output: Option<Utf8PathBuf>,
 
 	/// The .json indexes to reconstruct
 	#[clap(value_hint = ValueHint::FilePath, required = true)]
-	json_file: Vec<PathBuf>,
+	json_file: Vec<Utf8PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -29,7 +29,7 @@ struct FileId(u16);
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(remote = "Entry")]
 struct Entry {
-	path: Option<PathBuf>,
+	path: Option<Utf8PathBuf>,
 	name: Option<String>,
 	#[serde(default, deserialize_with="parse_compress_mode")]
 	compress: Option<bzip::CompressMode>,
@@ -47,8 +47,8 @@ pub fn run(cmd: &Command) -> eyre::Result<()> {
 	Ok(())
 }
 
-#[tracing::instrument(skip_all, fields(path=%json_file.display(), out))]
-fn create(cmd: &Command, json_file: &Path) -> eyre::Result<()> {
+#[tracing::instrument(skip_all, fields(path=%json_file, out))]
+fn create(cmd: &Command, json_file: &Utf8Path) -> eyre::Result<()> {
 	let json: BTreeMap<FileId, Option<Entry>>
 		= serde_json::from_reader(std::fs::File::open(json_file)?)?;
 
@@ -57,7 +57,7 @@ fn create(cmd: &Command, json_file: &Path) -> eyre::Result<()> {
 		.join(json_file.file_name().unwrap())
 		.with_extension("dir");
 
-	tracing::Span::current().record("out", tracing::field::display(out_dir.display()));
+	tracing::Span::current().record("out", tracing::field::display(&out_dir));
 	std::fs::create_dir_all(out_dir.parent().unwrap())?;
 
 	let size = json.last_key_value().map(|a| a.0.0 + 1).unwrap_or_default() as usize;
@@ -80,7 +80,7 @@ fn create(cmd: &Command, json_file: &Path) -> eyre::Result<()> {
 		.progress_chars("█🮆🮅🮄▀🮃🮂▔ ");
 	let ind = indicatif::ProgressBar::new(entries.iter().filter(|a| a.is_some()).count() as _)
 		.with_style(style)
-		.with_prefix(out_dir.display().to_string());
+		.with_prefix(out_dir.to_string());
 	let iter = par_map(
 		entries.into_iter(),
 		{
@@ -112,12 +112,12 @@ fn create(cmd: &Command, json_file: &Path) -> eyre::Result<()> {
 	Ok(())
 }
 
-fn process_entry(e: Option<Entry>, json_file: &Path) -> eyre::Result<(DirEntry, Option<Vec<u8>>)> {
+fn process_entry(e: Option<Entry>, json_file: &Utf8Path) -> eyre::Result<(DirEntry, Option<Vec<u8>>)> {
 	let mut ent = DirEntry::default();
 	let data = if let Some(e) = e {
 		let name = match &e {
 			Entry { name: Some(name), .. } => name.as_str(),
-			Entry { path: Some(path), .. } => path.file_name().unwrap().to_str().unwrap(),
+			Entry { path: Some(path), .. } => path.file_name().unwrap(),
 			_ => unreachable!()
 		};
 		let _span = tracing::info_span!("file", name=%name, path=tracing::field::Empty).entered();
@@ -127,7 +127,7 @@ fn process_entry(e: Option<Entry>, json_file: &Path) -> eyre::Result<(DirEntry, 
 
 		if let Some(path) = &e.path {
 			let path = json_file.parent().unwrap().join(path);
-			_span.record("path", tracing::field::display(path.display()));
+			_span.record("path", tracing::field::display(&path));
 
 			let data = std::fs::read(&path)?;
 			let mut data = match e.compress {
@@ -198,7 +198,7 @@ impl std::str::FromStr for Entry {
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		Ok(Entry {
-			path: Some(PathBuf::from(s)),
+			path: Some(Utf8PathBuf::from(s)),
 			name: None,
 			compress: None,
 			reserve: None,
