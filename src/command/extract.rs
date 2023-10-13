@@ -17,9 +17,7 @@ use crate::util::mmap;
 ///
 /// Files will be placed in a directory with the name of the archive.
 pub struct Command {
-	/// Directory to place resulting subdirectory in.
-	///
-	/// If unspecified, place the subdirectory next to the .dir file.
+	/// Directory to place extracted files in.
 	#[clap(long, short, value_hint = ValueHint::DirPath)]
 	output: Option<Utf8PathBuf>,
 	/// Include zero-sized files
@@ -49,10 +47,7 @@ fn extract(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<()> {
 	let dir_entries = dirdat::read_dir(&std::fs::read(dir_file)?)?;
 	let dat = mmap(&dir_file.with_extension("dat"))?;
 
-	let outdir = cmd.output.as_ref()
-		.map_or_else(|| dir_file.parent().unwrap(), |v| v.as_path())
-		.join(dir_file.file_stem().unwrap());
-
+	let outdir = crate::util::output(cmd.output.as_deref(), dir_file, "", cmd.dir_file.len())?;
 	std::fs::create_dir_all(&outdir)?;
 
 	let mut globset = globset::GlobSetBuilder::new();

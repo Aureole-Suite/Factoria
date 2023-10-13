@@ -1,4 +1,4 @@
-use camino::Utf8Path;
+use camino::{Utf8PathBuf, Utf8Path};
 use clap::builder::TypedValueParser;
 
 #[tracing::instrument(fields(path=%path))]
@@ -22,4 +22,22 @@ pub fn glob_parser() -> impl clap::builder::TypedValueParser<Value=globset::Glob
 			.literal_separator(false)
 			.build()
 	})
+}
+
+pub fn output(output: Option<&Utf8Path>, file: &Utf8Path, extension: &str, n_inputs: usize) -> eyre::Result<Utf8PathBuf> {
+	let dir = if let Some(output) = output.as_ref() {
+		if n_inputs == 1 && !output.as_str().ends_with(std::path::is_separator) {
+			if let Some(parent) = output.parent() {
+				std::fs::create_dir_all(parent)?;
+			}
+			return Ok(output.to_path_buf())
+		}
+
+		std::fs::create_dir_all(output)?;
+		output
+	} else {
+		file.parent().ok_or_else(|| eyre::eyre!("file has no parent"))?
+	};
+	let name = file.file_name().ok_or_else(|| eyre::eyre!("file has no name"))?;
+	Ok(dir.join(name).with_extension(extension))
 }

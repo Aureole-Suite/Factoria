@@ -23,9 +23,8 @@ pub struct Command {
 	#[clap(short='C', long)]
 	compressed: bool,
 
-	/// Directory to place the resulting json file in.
+	/// Where to place the resulting json file.
 	///
-	/// This is *not* the path of the actual file, for consistency with the `extract` command.
 	/// As a special case, if this is `-`, the json is written to stdout.
 	#[clap(long, short, value_hint = ValueHint::DirPath)]
 	output: Option<Utf8PathBuf>,
@@ -68,12 +67,7 @@ fn index(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<()> {
 		tracing::Span::current().record("out", tracing::field::display("stdout"));
 		Box::new(std::io::stdout().lock()) as Box<dyn Write>
 	} else {
-		let out = cmd.output.as_ref()
-			.map_or_else(|| dir_file.parent().unwrap(), |v| v.as_path())
-			.join(dir_file.file_name().unwrap())
-			.with_extension("json");
-
-		std::fs::create_dir_all(out.parent().unwrap())?;
+		let out = crate::util::output(cmd.output.as_deref(), dir_file, "json", cmd.dir_file.len())?;
 		tracing::Span::current().record("out", tracing::field::display(&out));
 		Box::new(std::fs::File::create(out)?)
 	};

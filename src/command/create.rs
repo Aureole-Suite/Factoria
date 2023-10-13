@@ -14,7 +14,7 @@ use crate::dirdat::{self, DirEntry, Name};
 #[derive(Debug, Clone, clap::Args)]
 #[command(arg_required_else_help = true)]
 pub struct Command {
-	/// Directory to place resulting .dir/.dat in
+	/// Location of the resulting .dir file. .dat is placed next to it.
 	#[clap(long, short, value_hint = ValueHint::DirPath)]
 	output: Option<Utf8PathBuf>,
 
@@ -52,10 +52,7 @@ fn create(cmd: &Command, json_file: &Utf8Path) -> eyre::Result<()> {
 	let json: BTreeMap<FileId, Option<Entry>>
 		= serde_json::from_reader(std::fs::File::open(json_file)?)?;
 
-	let out_dir = cmd.output.as_ref()
-		.map_or_else(|| json_file.parent().unwrap(), |v| v.as_path())
-		.join(json_file.file_name().unwrap())
-		.with_extension("dir");
+	let out_dir = crate::util::output(cmd.output.as_deref(), json_file, "dir", cmd.json_file.len())?;
 
 	tracing::Span::current().record("out", tracing::field::display(&out_dir));
 	std::fs::create_dir_all(out_dir.parent().unwrap())?;
