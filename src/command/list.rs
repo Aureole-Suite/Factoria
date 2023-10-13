@@ -88,6 +88,7 @@ pub struct Entry {
 	compression_mode: Option<bzip::CompressMode>,
 	weird_start: bool,
 	weird_end: bool,
+	weird_dat_offset: bool,
 }
 
 impl std::ops::Deref for Entry {
@@ -189,13 +190,18 @@ fn format_entry_long(cmd: &Command, archive_number: Option<u8>, e: &Entry, cells
 
 	// Flags, as part of same cell because why not
 	let flags = match (e.weird_start, e.weird_end) {
-		(false, false) => "",
+		(false, false) => " ",
 		(true, false) => "▔",
 		(false, true) => "▁",
 		(true, true)  => "🮀",
 	};
-	if !flags.is_empty() {
-		s.push_str(&format!("\x1B[31m{flags}\x1B[m"))
+	if flags != " " || e.weird_dat_offset {
+		s.push_str("\x1B[31m");
+		if e.weird_dat_offset {
+			s.push('•')
+		}
+		s.push_str(flags);
+		s.push_str("\x1B[m");
 	}
 	cells.push(Cell::left(s));
 
@@ -323,6 +329,7 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 			compression_mode: None,
 			weird_start: false,
 			weird_end: false,
+			weird_dat_offset: false,
 		})
 		.collect::<Vec<_>>();
 
@@ -336,6 +343,14 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 	for e in entries.iter_mut().rev().filter(|a| a.offset != 0) {
 		e.weird_end = e.offset + e.reserved_size != expected;
 		expected = e.offset;
+	}
+
+	if let Some(dat) = &dat {
+		if let Ok(f) = &mut gospel::read::Reader::new(dat).at(16) {
+			for e in entries.iter_mut() {
+				e.weird_dat_offset = f.u32_le().ok() != Some(e.offset as u32);
+			}
+		}
 	}
 
 	if !cmd.actually_all {
