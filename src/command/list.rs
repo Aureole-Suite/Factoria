@@ -297,6 +297,8 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 	}
 	let globset = globset.build()?;
 
+	let dat = emit(mmap(&dir_file.with_extension("dat")));
+
 	let mut entries = dirdat::read_dir(&std::fs::read(dir_file)?)?
 		.into_iter()
 		.enumerate()
@@ -319,7 +321,7 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 	}
 
 	if !cmd.compressed && (cmd.size || cmd.long || cmd.sort == SortColumn::Size) {
-		if let Ok(dat) = mmap(&dir_file.with_extension("dat")) {
+		if let Some(dat) = &dat {
 			for m in &mut entries {
 				if m.timestamp == 0 { continue }
 				let Some(data) = dat.get(m.offset..m.offset+m.size) else { continue };
