@@ -299,9 +299,6 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 
 	let mut entries = dirdat::read_dir(&std::fs::read(dir_file)?)?
 		.into_iter()
-		.filter(|e| cmd.actually_all || e.name != dirdat::Name::default())
-		.filter(|e| cmd.actually_all || cmd.all || e.timestamp != 0)
-		.filter(|e| globset.is_empty() || globset.is_match(e.name.to_string()))
 		.enumerate()
 		.map(|(index, dirent)| Entry {
 			dirent,
@@ -309,6 +306,9 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 			decompressed_size: None,
 			compression_mode: None,
 		})
+		.filter(|e| cmd.actually_all || e.name != dirdat::Name::default())
+		.filter(|e| cmd.actually_all || cmd.all || e.timestamp != 0)
+		.filter(|e| globset.is_empty() || globset.is_match(e.name.to_string()))
 		.collect::<Vec<_>>();
 
 	if !cmd.compressed && (cmd.size || cmd.long || cmd.sort == SortColumn::Size) {
