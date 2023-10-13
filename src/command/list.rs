@@ -86,6 +86,8 @@ pub struct Entry {
 	index: u16,
 	decompressed_size: Option<usize>,
 	compression_mode: Option<bzip::CompressMode>,
+	weird_start: bool,
+	weird_end: bool,
 }
 
 impl std::ops::Deref for Entry {
@@ -176,6 +178,7 @@ fn format_entry_short(cmd: &Command, archive_number: Option<u8>, e: &Entry, cell
 }
 
 fn format_entry_long(cmd: &Command, archive_number: Option<u8>, e: &Entry, cells: &mut Vec<Cell>) {
+	// Index
 	let mut s = String::new();
 	s.push_str("\x1B[2m");
 	if let Some(archive_number) = archive_number {
@@ -183,6 +186,17 @@ fn format_entry_long(cmd: &Command, archive_number: Option<u8>, e: &Entry, cells
 	}
 	s.push_str("\x1B[m");
 	s.push_str(&format!("{:04X}", e.index));
+
+	// Flags, as part of same cell because why not
+	let flags = match (e.weird_start, e.weird_end) {
+		(false, false) => "",
+		(true, false) => "▔",
+		(false, true) => "▁",
+		(true, true)  => "🮀",
+	};
+	if !flags.is_empty() {
+		s.push_str(&format!("\x1B[31m{flags}\x1B[m"))
+	}
 	cells.push(Cell::left(s));
 
 	cells.push(Cell::right(e.unk1.to_string()));
@@ -307,8 +321,22 @@ fn get_entries(cmd: &Command, dir_file: &Utf8Path) -> eyre::Result<Vec<Entry>> {
 			index: index as u16,
 			decompressed_size: None,
 			compression_mode: None,
+			weird_start: false,
+			weird_end: false,
 		})
 		.collect::<Vec<_>>();
+
+	let mut expected = 16+4*(entries.len()+1);
+	for e in entries.iter_mut().filter(|a| a.offset != 0) {
+		e.weird_start = e.offset != expected;
+		expected = e.offset + e.reserved_size;
+	}
+
+	let mut expected = dat.as_ref().map_or(expected, |a| a.len());
+	for e in entries.iter_mut().rev().filter(|a| a.offset != 0) {
+		e.weird_end = e.offset + e.reserved_size != expected;
+		expected = e.offset;
+	}
 
 	if !cmd.actually_all {
 		entries.retain(|e| e.name != dirdat::Name::default());
