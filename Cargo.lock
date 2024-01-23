@@ -307,7 +307,7 @@ dependencies = [
 
 [[package]]
 name = "factoria"
-version = "1.1.0"
+version = "1.0.0"
 dependencies = [
  "camino",
  "chrono",
@@ -318,7 +318,7 @@ dependencies = [
  "falcompress",
  "filetime",
  "globset",
- "gospel",
+ "gospel 0.3.1",
  "indicatif",
  "memmap2",
  "number_prefix",
@@ -339,7 +339,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b865e442ece0a3e193a9b82c74d56be2c57bb1ea81379ceba6b54f0cebedd45a"
 dependencies = [
  "anyhow",
- "gospel",
+ "gospel 0.1.1",
  "phf",
  "phf_codegen",
 ]
@@ -347,9 +347,10 @@ dependencies = [
 [[package]]
 name = "falcompress"
 version = "0.1.0"
+source = "git+https://github.com/Aureole-Suite/Falcompress.git#61213cc799f98e75662d8aaac5cb8e00b6df4509"
 dependencies = [
  "bitmatch",
- "gospel",
+ "gospel 0.1.1",
  "thiserror",
 ]
 
@@ -389,6 +390,16 @@ name = "gospel"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95806f9b14571299179599809fbea7820ab7541e1dbb0afa7c08fcaef571db39"
+dependencies = [
+ "paste",
+ "thiserror",
+]
+
+[[package]]
+name = "gospel"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cceecce6f4eed9f1e8390d809f8436ca148f6404aaf3b8e81a18dcbaef8a65a7"
 dependencies = [
  "paste",
  "thiserror",
@@ -527,9 +538,9 @@ checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 
 [[package]]
 name = "memmap2"
-version = "0.7.1"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f49388d20533534cd19360ad3d6a7dadc885944aa802ba3995040c5ec11288c6"
+checksum = "45fd3a57831bf88bc63f8cebc0cf956116276e97fef3966103e96416209f7c92"
 dependencies = [
  "libc",
 ]
